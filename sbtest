@@ -34,27 +34,35 @@ def strip_special(line):
 
 
 def run_command(cmd, stdin=None, sudo=False, **kwargs):
-    logging.debug('Running command: %s', cmd)
     if sudo:
-        logging.debug('Sudo command running')
-        cmd = ['sudo'] + cmd
-    logging.debug('Stdin: %s', stdin)
+        cmd.insert(0, 'sudo')
+    logging.debug('Running command: %s', [str(i) for i in cmd])
     p = subprocess.Popen(cmd,
+                         stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          **kwargs)
+
+    if stdin is not None:
+        logging.debug('Stdin: \'%s\'', stdin)
+        stdin = stdin.encode('utf-8')
+
     stdout, stderr = p.communicate(stdin)
     rc = p.wait()
 
+    stdout = stdout.decode('utf-8')
+    logging.debug('Stdout: \'%s\'', stdout)
+
+    stderr = stderr.decode('utf-8')
+    logging.debug('Stderr: \'%s\'', stderr)
+
     logging.debug('Return code: %s', rc)
-    logging.debug('Stdout: %s', stdout)
-    logging.debug('Stderr: %s', stderr)
 
     if rc != 0:
-        raise Exception('Command failed, status: %s, out: %s, err: %s'
+        raise Exception('Command failed, status: %s, out: \'%s\', err: \'%s\''
                         % (rc, stdout, stderr))
 
-    return stdout.decode('utf-8'), stderr.decode('utf-8')
+    return stdout, stderr
 
 
 class LoopDiskManager(object):
