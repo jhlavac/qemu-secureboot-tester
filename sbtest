@@ -29,8 +29,8 @@ EXIT_CODE_GRUB_ERROR    = 3
 EXIT_CODE_KERN_ERROR    = 4
 
 
-def strip_special(line):
-    return ''.join([c for c in str(line) if c in string.printable])
+def strip_special(text):
+    return ''.join([i for i in text if i in string.printable])
 
 
 def run_command(cmd, stdin=None, sudo=False, **kwargs):
@@ -398,30 +398,34 @@ def perform_expect(commands, sin, sout, print_out):
         commands = commands[1:]
         if opcode == CMD_PRESSKEY:
             assert monitormode, "CMD_PRESSKEY is only valid in monitor mode"
-            key = args[0].encode('ascii')
+            key = args[0]
             repeat = 1
             if len(args) >= 2:
                 repeat = args[1]
             logging.debug('Sending key %s %d times', key, repeat)
+            key = key.encode('ascii')
             while repeat > 0:
                 sin.write(b'sendkey %s\n' % key)
                 sin.flush()
                 repeat -= 1
         elif opcode == CMD_WAIT:
-            needles = [needle.encode('ascii') for needle in args]
-            logging.debug('Waiting for any of %s', needles)
+            needles = args
+            logging.debug('Waiting for any of %s', [str(i) for i in needles])
+            needles = [i.encode('ascii') for i in needles]
             buf = b''
             while True:
                 read = sout.read(1)
                 if len(read) != 1:
                     raise Exception('Error reading')
                 if print_out:
-                    print(strip_special(read), end='')
+                    # The OVMF (EDK II) serial console uses CP437, see:
+                    # MdeModulePkg/Universal/Console/TerminalDxe/TerminalConOut.c
+                    print(strip_special(read.decode('cp437')), end='')
                 buf += read
                 foundneedle = False
                 for needle in needles:
                     if needle in buf:
-                        logging.debug('Found expected string: %s', needle)
+                        logging.debug('Found expected string: \'%s\'', needle.decode('ascii'))
                         foundneedle = True
                         break
                 if foundneedle:
@@ -434,8 +438,9 @@ def perform_expect(commands, sin, sout, print_out):
             logging.log(*args)
         elif opcode == CMD_SENDTEXT:
             assert not monitormode, "CMD_SENDTEXT is only valid in plain text mode"
-            text = args[0].encode('ascii')
-            logging.debug('Sending text %s', text)
+            text = args[0]
+            logging.debug('Sending text \'%s\'', text)
+            text = text.encode('ascii')
             sin.write(text)
             sin.flush()
         elif opcode == CMD_TOGGLEMONITOR:
