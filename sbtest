@@ -425,6 +425,12 @@ def perform_expect(commands, sin, sout, print_out):
                 foundneedle = False
                 for needle in needles:
                     if needle in buf:
+                        # Both output sources are enabled
+                        if print_out and logging.getLogger().isEnabledFor(logging.INFO):
+                            # Append '\n' to the output of the QEMU process
+                            print()
+                            # Synchronize the output with logged messages
+                            sys.stdout.flush()
                         logging.debug('Found expected string: \'%s\'', needle.decode('ascii'))
                         foundneedle = True
                         break
@@ -721,6 +727,10 @@ def main():
 
     logging.info('Booting has been fully verified')
 
+    # The output of the QEMU process is the only output source
+    if args.print_output and not logging.getLogger().isEnabledFor(logging.INFO):
+        # Append the trailing '\n' to the output
+        print()
 
 if __name__ == '__main__':
     main()
