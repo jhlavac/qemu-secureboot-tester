@@ -166,9 +166,9 @@ def parse_args():
     parser.add_argument('--print-output', help='Print the QEMU guest output',
                         action='store_true')
     parser.add_argument('--verbose', '-v', help='Increase verbosity',
-                        action='count')
+                        action='count', default=0)
     parser.add_argument('--quiet', '-q', help='Decrease verbosity',
-                        action='count')
+                        action='count', default=0)
     parser.add_argument('--qemu-binary', help='QEMU binary path',
                         default='/usr/bin/qemu-system-x86_64')
     parser.add_argument('--enable-kvm', help='Enable KVM acceleration',
@@ -230,15 +230,13 @@ def validate_args(args):
     if args.tpm and not os.path.exists(args.swtpm_path):
         raise SystemExit('SWTPM path invalid')
 
-    verbosity = (args.verbose or 1) - (args.quiet or 0)
-    level = logging.INFO
-    if verbosity >= 2:
-        level = logging.DEBUG
-    elif verbosity == 1:
-        level = logging.INFO
-    elif verbosity < 0:
-        level = logging.ERROR
-    logging.basicConfig(level=level)
+    verbosity = args.verbose - args.quiet
+    logger_level = logging.INFO
+    if verbosity < 0:
+        logger_level = logging.ERROR
+    elif verbosity > 0:
+        logger_level = logging.DEBUG
+    logging.basicConfig(level=logger_level)
 
 
 def generate_keys(args):
